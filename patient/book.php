@@ -19,32 +19,49 @@ if (isset($_POST['patient_fname']) && isset($_POST['patient_lname']) && isset($_
     $date = date("Y-m-d", strtotime($date));
     $time = date("h:00:00", strtotime($time));
 
-    $query = mysqli_query($connection, "SELECT * FROM patients WHERE patient_email ='$patientEmail' OR patient_phone ='$patientPhone'") or die(mysqli_error($connection));
-    $count = mysqli_num_rows($query);
-    $patient = mysqli_fetch_assoc($query);
+    // avoid to book for past dates and time
 
-    if ($count > 0) {
 
-        $patientId = $patient["patient_id"];
+    $startDate = strtotime(date('Y-m-d h:00:00', strtotime($date." ".$time)));
+    $currentDate = strtotime(date('Y-m-d h:00:00'));
+
+    if ($startDate < $currentDate) {
+        $array = array(
+            'code' => 400,
+            'status' => "error",
+            'message' => "You can not book apointment for past dates and time",
+            'data' => ''
+        );
+
     } else {
 
-        $query = mysqli_query($connection, "INSERT INTO `patients` (`patient_id`, `patient_fname`, `patient_lname`, `patient_email`, `patient_phone`,  `patient_password`,`patient_status`) 
+        $query = mysqli_query($connection, "SELECT * FROM patients WHERE patient_email ='$patientEmail' OR patient_phone ='$patientPhone'") or die(mysqli_error($connection));
+        $count = mysqli_num_rows($query);
+        $patient = mysqli_fetch_assoc($query);
+
+        if ($count > 0) {
+
+            $patientId = $patient["patient_id"];
+        } else {
+
+            $query = mysqli_query($connection, "INSERT INTO `patients` (`patient_id`, `patient_fname`, `patient_lname`, `patient_email`, `patient_phone`,  `patient_password`,`patient_status`) 
         VALUES (NULL, '$firstName', '$lastName', '$patientEmail', '$patientPhone','$patientPassword', 'active')") or die(mysqli_error($connection));
-        $patientId = mysqli_insert_id($connection);
-    }
+            $patientId = mysqli_insert_id($connection);
+        }
 
 
 
-    mysqli_query($connection, "INSERT INTO `appointments` (`appointment_id`, `doctor_id`, `patient_id`, `appointment_date`, `appointment_time`, `appointment_comment`, `appointment_status`) 
+        mysqli_query($connection, "INSERT INTO `appointments` (`appointment_id`, `doctor_id`, `patient_id`, `appointment_date`, `appointment_time`, `appointment_comment`, `appointment_status`) 
     VALUES (NULL, '$doctorId', '$patientId', '$date', '$time', NULL, 'pending')") or die(mysqli_error($connection));
 
-    $array = array(
-        'code' => 200,
-        'status' => "success",
-        'message' => "You have successfully booked your appointment, we will comfirm soon",
-        'data' => ''
-    );
-    
+        $array = array(
+            'code' => 200,
+            'status' => "success",
+            'message' => "You have successfully booked your appointment, we will comfirm soon",
+            'data' => ''
+        );
+    }
+
 } else {
     $array = array(
         'code' => 400,
